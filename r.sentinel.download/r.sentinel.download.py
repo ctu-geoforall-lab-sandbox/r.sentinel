@@ -146,7 +146,7 @@ class SentinelDownloader(object):
         )
 
         if limit:
-            self.products_df_sorted = self.products_df_sorted.head(int(limit))
+            self._products_df_sorted = self._products_df_sorted.head(int(limit))
 
         gs.message('{} Sentinel product(s) found'.format(len(self._products_df_sorted)))
 
