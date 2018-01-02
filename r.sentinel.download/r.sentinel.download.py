@@ -90,7 +90,7 @@ def get_aoi_box(vector=None):
         args['vector'] = vector
     info = gs.parse_command('g.region', flags='uplg', **args)
 
-    return 'POLYGON(({nw_lat} {nw_lon}, {ne_lat} {ne_lon}, {se_lat} {se_lon}, {sw_lat} {sw_lon}, {nw_lat} {nw_lon}))'.format(
+    return 'POLYGON(({nw_lon} {nw_lat}, {ne_lon} {ne_lat}, {se_lon} {se_lat}, {sw_lon} {sw_lat}, {nw_lon} {nw_lat}))'.format(
         nw_lat=info['nw_lat'], nw_lon=info['nw_long'], ne_lat=info['ne_lat'], ne_lon=info['ne_long'],
         sw_lat=info['sw_lat'], sw_lon=info['sw_long'], se_lat=info['se_lat'], se_lon=info['se_long']
     )
