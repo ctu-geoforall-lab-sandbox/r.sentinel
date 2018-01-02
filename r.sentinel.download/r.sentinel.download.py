@@ -139,14 +139,14 @@ class SentinelDownloader(object):
             gs.message('No product found')
             return
 
-        if limit:
-            products_df = products_df.head(int(limit))
-
         # sort and limit to first sorted product
         self._products_df_sorted = products_df.sort_values(
             ['cloudcoverpercentage', 'ingestiondate', 'footprint'],
             ascending=[True, True, True]
         )
+
+        if limit:
+            products_df_sorted = products_df_sorted.head(int(limit))
 
         gs.message('{} Sentinel product(s) found'.format(len(self._products_df_sorted)))
 
