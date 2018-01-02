@@ -121,7 +121,7 @@ class SentinelDownloader(object):
         if producttype:
             args['producttype'] = producttype
         if not start:
-            start = 'NOW-7DAYS'
+            start = 'NOW-30DAYS'
         else:
             start = start.replace('-', '')
         if not end:
