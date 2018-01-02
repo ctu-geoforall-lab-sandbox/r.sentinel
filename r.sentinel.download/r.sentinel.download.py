@@ -39,6 +39,7 @@
 #% description: Sentinel product type to filter
 #% required: no
 #% options: SLC,GRD,OCN,S2MSI1C,S2MSI2Ap
+#% answer: S2MSI1C
 #%end
 #%option
 #% key: limit
