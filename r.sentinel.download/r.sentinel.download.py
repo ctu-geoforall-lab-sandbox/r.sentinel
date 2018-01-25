@@ -98,8 +98,15 @@ def get_aoi_box(vector=None):
 
 class SentinelDownloader(object):
     def __init__(self, user, password):
-        from sentinelsat import SentinelAPI
-        
+        try:
+            from sentinelsat import SentinelAPI
+        except ImportError as e:
+            gs.fatal("Module requires sentinelsat library: {}".format(e))
+        try:
+            import pandas
+        except ImportError as e:
+            gs.fatal("Module requires pandas library: {}".format(e))
+
         # init logger
         root = logging.getLogger()
         root.addHandler(logging.StreamHandler(
