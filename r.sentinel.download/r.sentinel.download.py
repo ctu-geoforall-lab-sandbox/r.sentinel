@@ -79,15 +79,15 @@
 #% required: no
 #%end
 #%option
-#% key: values
+#% key: sort
 #% description: Sort by values in given order
 #% multiple: yes
 #% options: ingestiondate,cloudcoverpercentage,footprint
 #% answer: cloudcoverpercentage,ingestiondate,footprint
 #%end
 #%option
-#% key: sort
-#% description: Sort order (see values parameter)
+#% key: order
+#% description: Sort order (see sort parameter)
 #% options: asc,desc
 #% answer: asc
 #%end
@@ -278,8 +278,8 @@ def main():
                       limit=options['limit'],
                       start=options['start'],
                       end=options['end'],
-                      sortby=options['values'].split(','),
-                      asc=options['sort'] == 'asc'
+                      sortby=options['sort'].split(','),
+                      asc=options['order'] == 'asc'
     )
 
     if options['footprints']:
