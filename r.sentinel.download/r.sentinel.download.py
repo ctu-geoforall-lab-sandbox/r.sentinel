@@ -103,7 +103,6 @@ import os
 import sys
 import logging
 import zipfile
-import logging
 
 from collections import OrderedDict
 
@@ -153,7 +152,7 @@ class SentinelDownloader(object):
         if producttype:
             args['producttype'] = producttype
         if not start:
-            start = 'NOW-30DAYS'
+            start = 'NOW-60DAYS'
         else:
             start = start.replace('-', '')
         if not end:
@@ -290,7 +289,7 @@ def main():
         return
 
     downloader.download(options['output'])
-    
+
     return 0
 
 if __name__ == "__main__":
