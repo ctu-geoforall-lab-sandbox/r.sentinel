@@ -71,11 +71,27 @@
 #%option G_OPT_M_DIR
 #% key: output
 #% description: Name for output directory where to store downloaded Sentinel data
-#% required: yes
+#% required: no
+#%end
+#%option
+#% key: values
+#% description: Sort by values in given order
+#% multiple: yes
+#% options: ingestiondate,cloudcoverpercentage,footprint
+#% answer: cloudcoverpercentage,ingestiondate,footprint
+#%end
+#%option
+#% key: sort
+#% description: Sort order (see values parameter)
+#% options: asc,desc
+#% answer: asc
 #%end
 #%flag
 #% key: l
 #% description: List filtered products
+#%end
+#%rules
+#% required: output,-l
 #%end
 
 import os
@@ -122,7 +138,7 @@ class SentinelDownloader(object):
         
     def filter(self, area,
                clouds=None, producttype=None, limit=None,
-               start=None, end=None):
+               start=None, end=None, sortby=[], asc=True):
         args = {}
         if clouds:
             args['cloudcoverpercentage'] = (0, clouds)
@@ -148,10 +164,11 @@ class SentinelDownloader(object):
             return
 
         # sort and limit to first sorted product
-        self._products_df_sorted = products_df.sort_values(
-            ['cloudcoverpercentage', 'ingestiondate', 'footprint'],
-            ascending=[True, True, True]
-        )
+        if sortby:
+            self._products_df_sorted = products_df.sort_values(
+                sortby,
+                ascending=[asc] * len(sortby)
+            )
 
         if limit:
             self._products_df_sorted = self._products_df_sorted.head(int(limit))
@@ -165,7 +182,7 @@ class SentinelDownloader(object):
         for idx in range(len(self._products_df_sorted)):
             print ('{0} {1} {2:2.0f}% {3}'.format(
                 self._products_df_sorted['uuid'][idx],
-                self._products_df_sorted['beginposition'][idx].strftime("%Y-%m-%d"),
+                self._products_df_sorted['beginposition'][idx].strftime("%Y-%m-%dT%H:%M:%SZ"),
                 self._products_df_sorted['cloudcoverpercentage'][idx],
                 self._products_df_sorted['producttype'][idx],
             ))
@@ -202,7 +219,9 @@ def main():
                       producttype=options['producttype'],
                       limit=options['limit'],
                       start=options['start'],
-                      end=options['end']
+                      end=options['end'],
+                      sortby=options['values'].split(','),
+                      asc=options['sort'] == 'asc'
     )
 
     if flags['l']:
