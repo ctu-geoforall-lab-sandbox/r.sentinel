@@ -40,11 +40,19 @@ import sys
 import re
 
 import grass.script as gs
+from grass.exceptions import CalledModuleError
 
 def import_file(filename, link=False):
     module = 'r.external' if link else 'r.import'
     mapname = os.path.splitext(os.path.basename(filename))[0]
-    gs.run_command(module, input=filename, output=mapname)
+    if link:
+        gs.message('Linking <{}>...'.format(mapname))
+    else:
+        gs.message('Importing <{}>...'.format(mapname))
+    try:
+        gs.run_command(module, input=filename, output=mapname)
+    except CalledModuleError as e:
+        pass # error already printed
     
 def main():
     input_dir = options['input']
@@ -62,12 +70,12 @@ def main():
             continue
 
         match = filter(pattern.match, rec[-1])
-        if match:
-            for f in match:
-                gs.message('Importing <{}>...'.format(f))
-                import_file(os.path.join(rec[0], f), flags['l'])
+        if match is None:
+            continue
 
-                
+        for f in match:
+            import_file(os.path.join(rec[0], f), flags['l'])
+
     return 0
 
 if __name__ == "__main__":
