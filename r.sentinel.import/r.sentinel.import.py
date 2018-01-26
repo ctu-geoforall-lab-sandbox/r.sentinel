@@ -34,6 +34,10 @@
 #% key: l
 #% description: Link raster data instead of importing
 #%end
+#%flag
+#% key: c
+#% description: Import cloud masks as vector maps
+#%end
 
 import os
 import sys
@@ -42,39 +46,77 @@ import re
 import grass.script as gs
 from grass.exceptions import CalledModuleError
 
-def import_file(filename, link=False):
-    module = 'r.external' if link else 'r.import'
-    mapname = os.path.splitext(os.path.basename(filename))[0]
-    if link:
-        gs.message('Linking <{}>...'.format(mapname))
-    else:
-        gs.message('Importing <{}>...'.format(mapname))
-    try:
-        gs.run_command(module, input=filename, output=mapname)
-    except CalledModuleError as e:
-        pass # error already printed
-    
+class SentinelImporter(object):
+    def __init__(self, input_dir):
+        if not os.path.exists(input_dir):
+            gs.fatal('{} not exists'.format(input_dir))
+        self.input_dir = input_dir
+
+    def filter(self, pattern=None):
+        if pattern:
+            filter_p = '.*' + options['pattern'] + '.jp2$'
+        else:
+            filter_p = r'.*_B.*.jp2$'
+
+        self.files = self._filter(filter_p)
+
+    def _filter(self, filter_p):
+        pattern = re.compile(filter_p)
+        files = []
+        for rec in os.walk(self.input_dir):
+            if not rec[-1]:
+                continue
+
+            match = filter(pattern.match, rec[-1])
+            if match is None:
+                continue
+
+            for f in match:
+                files.append(os.path.join(rec[0], f))
+
+        return files
+
+    def import_products(self, link=False):
+        for f in self.files:
+            self._import_file(f, link)
+
+    def _import_file(self, filename, link=False):
+        module = 'r.external' if link else 'r.import'
+        mapname = os.path.splitext(os.path.basename(filename))[0]
+        if link:
+            gs.message('Linking <{}>...'.format(mapname))
+        else:
+            gs.message('Importing <{}>...'.format(mapname))
+        try:
+            gs.run_command(module, input=filename, output=mapname)
+        except CalledModuleError as e:
+            pass # error already printed
+
+    def import_cloud_masks(self):
+        files = self._filter("MSK_CLOUDS_B00.gml")
+
+        for f in files:
+            safe_dir = os.path.dirname(f).split(os.path.sep)[-4]
+            items = safe_dir.split('_')
+            map_name = '_'.join([items[5],items[2], 'MSK', 'CLOUDS'])
+            try:
+                gs.run_command('v.import', input=f,
+                               flags='o', # same SRS as data
+                               output=map_name,
+                               quiet=True
+                )
+            except CalledModuleError as e:
+                pass # error already printed
+
 def main():
-    input_dir = options['input']
-    if not os.path.exists(input_dir):
-        gs.fatal('{} not exists'.format(input_dir))
+    importer = SentinelImporter(options['input'])
 
-    if options['pattern']:
-        filter_p = '.*' + options['pattern'] + '.jp2$'
-    else:
-        filter_p = r'.*_B.*.jp2$'
-    pattern = re.compile(filter_p)
-    files = []
-    for rec in os.walk(input_dir):
-        if not rec[-1]:
-            continue
+    importer.filter(options['pattern'])
 
-        match = filter(pattern.match, rec[-1])
-        if match is None:
-            continue
+    importer.import_products(flags['l'])
 
-        for f in match:
-            import_file(os.path.join(rec[0], f), flags['l'])
+    if flags['c']:
+        importer.import_cloud_masks()
 
     return 0
 
