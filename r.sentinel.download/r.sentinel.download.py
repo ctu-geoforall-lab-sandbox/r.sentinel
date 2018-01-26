@@ -73,6 +73,11 @@
 #% description: Name for output directory where to store downloaded Sentinel data
 #% required: no
 #%end
+#%option G_OPT_V_OUTPUT
+#% key: footprints
+#% description: Name for output vector map with footprints
+#% required: no
+#%end
 #%option
 #% key: values
 #% description: Sort by values in given order
@@ -88,7 +93,7 @@
 #%end
 #%flag
 #% key: l
-#% description: List filtered products
+#% description: List filtered products and exist
 #%end
 #%rules
 #% required: output,-l
@@ -98,6 +103,9 @@ import os
 import sys
 import logging
 import zipfile
+import logging
+
+from collections import OrderedDict
 
 import grass.script as gs
 
@@ -209,6 +217,56 @@ class SentinelDownloader(object):
             with zipfile.ZipFile(os.path.join(output, filename), 'r') as zip_ref:
                 zip_ref.extractall(output)
 
+    def save_footprints(self, map_name):
+        if self._products_df_sorted is None:
+            return
+
+        try:
+            from osgeo import ogr, osr
+        except ImportError as e:
+            gs.fatal("Option <footprints> requires GDAL library: {}".format(e))
+
+        gs.message("Writing footprints into <{}>...".format(map_name))
+        driver = ogr.GetDriverByName("GPKG")
+        tmp_name = gs.tempfile() + '.gpkg'
+        data_source = driver.CreateDataSource(tmp_name)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+
+        layer = data_source.CreateLayer(str(map_name), srs, ogr.wkbPolygon)
+
+        # attributes
+        attrs = OrderedDict([
+            ("uuid", ogr.OFTString),
+            ("ingestiondate", ogr.OFTString),
+            ("cloudcoverpercentage", ogr.OFTInteger),
+            ("producttype", ogr.OFTString)
+        ])
+        for key in attrs.keys():
+            field = ogr.FieldDefn(key, attrs[key])
+            layer.CreateField(field)
+
+        # features
+        for idx in range(len(self._products_df_sorted)):
+            wkt = self._products_df_sorted['footprint'][idx]
+            feature = ogr.Feature(layer.GetLayerDefn())
+            feature.SetGeometry(ogr.CreateGeometryFromWkt(wkt))
+            for key in attrs.keys():
+                if key == 'ingestiondate':
+                    value = self._products_df_sorted[key][idx].strftime("%Y-%m-%dT%H:%M:%SZ")
+                else:
+                    value = self._products_df_sorted[key][idx]
+                feature.SetField(key, value)
+            layer.CreateFeature(feature)
+            feature = None
+
+        data_source = None
+
+        gs.run_command('v.import', input=tmp_name, output=map_name,
+                       layer=map_name, quiet=True
+        )
+
 def main():
     map_box = get_aoi_box(options['map'])
 
@@ -223,6 +281,9 @@ def main():
                       sortby=options['values'].split(','),
                       asc=options['sort'] == 'asc'
     )
+
+    if options['footprints']:
+        downloader.save_footprints(options['footprints'])
 
     if flags['l']:
         downloader.list()
