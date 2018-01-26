@@ -26,6 +26,10 @@
 #% description: Name for input directory where downloaded Sentinel data lives
 #% required: yes
 #%end
+#%option
+#% key: pattern
+#% description: File name pattern to import
+#%end
 #%flag
 #% key: l
 #% description: Link raster data instead of importing
@@ -47,7 +51,11 @@ def main():
     if not os.path.exists(input_dir):
         gs.fatal('{} not exists'.format(input_dir))
 
-    pattern = re.compile(r'.*_B.*.jp2$')
+    if options['pattern']:
+        filter_p = '.*' + options['pattern'] + '.jp2$'
+    else:
+        filter_p = r'.*_B.*.jp2$'
+    pattern = re.compile(filter_p)
     files = []
     for rec in os.walk(input_dir):
         if not rec[-1]:
